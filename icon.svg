@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="32" fill="#1a1a2e"/>
+  <!-- Ear shape -->
+  <path d="M96 32c-30 0-54 24-54 54 0 18 9 34 22 44l4 30h56l4-30c13-10 22-26 22-44 0-30-24-54-54-54z" fill="#e63946" opacity="0.15"/>
+  <!-- Sound waves -->
+  <path d="M60 96 Q68 80 76 96 Q84 112 92 96" stroke="#e63946" stroke-width="5" fill="none" stroke-linecap="round"/>
+  <path d="M72 70 Q84 48 96 70 Q108 92 120 70" stroke="#e63946" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <path d="M84 50 Q96 24 108 50" stroke="#e63946" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.4"/>
+  <!-- Circle dot -->
+  <circle cx="96" cy="128" r="10" fill="#e63946"/>
+  <!-- Number indicator -->
+  <text x="96" y="170" text-anchor="middle" font-family="Arial" font-size="22" font-weight="bold" fill="#ffffff">טינטון</text>
+</svg>

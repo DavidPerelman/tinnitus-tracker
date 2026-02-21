@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+<meta name="theme-color" content="#1a1a2e"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<title>מעקב טינטון</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" href="icon.svg"/>
+<style>
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e63946;
+    --accent2: #f4a261;
+    --green: #2dc653;
+    --yellow: #f4d03f;
+    --red: #e63946;
+    --text: #eaeaea;
+    --text2: #9ca3af;
+    --border: #2a3a5e;
+    --radius: 16px;
+    --nav-h: 70px;
+  }
+  html, body {
+    height: 100%;
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+  }
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  /* ===== SCREENS ===== */
+  .screen {
+    display: none;
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 16px;
+    padding-bottom: calc(var(--nav-h) + 20px);
+  }
+  .screen.active { display: block; }
+
+  /* ===== NAV ===== */
+  nav {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: var(--nav-h);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 100;
+  }
+  .nav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: none;
+    background: transparent;
+    color: var(--text2);
+    font-size: 11px;
+    cursor: pointer;
+    transition: color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn svg { width: 24px; height: 24px; }
+
+  /* ===== TYPOGRAPHY ===== */
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  h2 { font-size: 18px; font-weight: 600; margin-bottom: 12px; }
+
+  /* ===== SCREEN 1: LOG ===== */
+  #screen-log {
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    padding-top: 10px;
+  }
+  #screen-log.active { display: flex; }
+
+  .log-header { text-align: center; }
+  .log-header h1 { font-size: 26px; }
+  .log-header p { color: var(--text2); font-size: 14px; margin-top: 4px; }
+
+  .date-display {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 24px;
+    font-size: 17px;
+    color: var(--text2);
+    text-align: center;
+  }
+
+  .intensity-section { text-align: center; width: 100%; max-width: 340px; }
+  .intensity-label { font-size: 15px; color: var(--text2); margin-bottom: 14px; }
+
+  .intensity-slider-wrap {
+    position: relative;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  .intensity-value {
+    font-size: 88px;
+    font-weight: 900;
+    line-height: 1;
+    text-align: center;
+    color: var(--text);
+    transition: color 0.3s;
+    user-select: none;
+    min-height: 96px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 10px;
+    border-radius: 5px;
+    background: var(--border);
+    outline: none;
+    margin: 0;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 4px rgba(230,57,70,0.25);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: none;
+  }
+  .scale-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 6px;
+    padding: 0 2px;
+  }
+
+  .btn-save {
+    width: 100%;
+    max-width: 340px;
+    padding: 20px;
+    font-size: 22px;
+    font-weight: 700;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    box-shadow: 0 4px 24px rgba(230,57,70,0.35);
+    transition: transform 0.1s, box-shadow 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-save:active { transform: scale(0.97); box-shadow: 0 2px 12px rgba(230,57,70,0.3); }
+
+  .save-feedback {
+    font-size: 15px;
+    color: var(--green);
+    min-height: 24px;
+    text-align: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .save-feedback.show { opacity: 1; }
+
+  /* ===== SCREEN 2: ANALYSIS ===== */
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .section-card h2 { margin-bottom: 0; }
+
+  .trend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 100px;
+    font-size: 16px;
+    font-weight: 700;
+    margin-top: 10px;
+  }
+  .trend-badge.improving { background: rgba(45,198,83,0.18); color: var(--green); }
+  .trend-badge.stable    { background: rgba(244,208,63,0.18); color: var(--yellow); }
+  .trend-badge.worsening { background: rgba(230,57,70,0.18); color: var(--red); }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-val { font-weight: 700; font-size: 17px; }
+
+  /* Chart */
+  #chart-canvas {
+    width: 100%;
+    height: 200px;
+    display: block;
+  }
+  .chart-wrap {
+    position: relative;
+    width: 100%;
+    overflow-x: auto;
+  }
+  .no-data {
+    text-align: center;
+    color: var(--text2);
+    padding: 40px 0;
+    font-size: 15px;
+  }
+
+  /* ===== SCREEN 3: COMPARE ===== */
+  .week-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .week-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .week-header:active { background: rgba(255,255,255,0.04); }
+  .week-label { font-size: 15px; font-weight: 600; }
+  .week-avg { font-size: 15px; color: var(--text2); }
+  .week-chevron {
+    transition: transform 0.25s;
+    color: var(--text2);
+  }
+  .week-row.open .week-chevron { transform: rotate(180deg); }
+
+  .week-days {
+    display: none;
+    border-top: 1px solid var(--border);
+  }
+  .week-row.open .week-days { display: block; }
+  .day-entry {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 16px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .day-entry:last-child { border-bottom: none; }
+  .day-name { color: var(--text2); }
+  .day-val { font-weight: 600; }
+
+  /* Compare panel */
+  .compare-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .compare-controls select {
+    flex: 1;
+    min-width: 120px;
+    padding: 10px 12px;
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    appearance: none;
+    -webkit-appearance: none;
+    text-align: right;
+  }
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  .compare-table th {
+    background: var(--surface2);
+    padding: 10px 12px;
+    text-align: right;
+    font-weight: 600;
+    font-size: 13px;
+  }
+  .compare-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+  }
+  .compare-table tr:last-child td { border-bottom: none; }
+  .compare-table td.better { color: var(--green); }
+  .compare-table td.worse  { color: var(--red); }
+  .compare-table td.same   { color: var(--yellow); }
+
+  /* Today's entries list */
+  .today-entries-wrap { width: 100%; max-width: 340px; }
+  .today-label { font-size: 13px; color: var(--text2); margin-bottom: 8px; text-align: center; }
+  .today-empty { font-size: 13px; color: var(--text2); text-align: center; }
+  .today-entry {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 14px;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  .today-time { color: var(--text2); }
+  .today-val  { font-weight: 700; font-size: 16px; }
+  .entry-count { font-size: 11px; color: var(--text2); font-weight: 400; }
+
+  /* ===== ALL-ENTRIES LIST (log screen) ===== */
+  .all-entries-wrap { width: 100%; }
+  .all-entries-header { font-size: 13px; color: var(--text2); margin-bottom: 8px; padding: 0 2px; }
+  .entry-day-group { margin-bottom: 14px; }
+  .entry-day-label {
+    font-size: 12px; color: var(--text2); font-weight: 600;
+    margin-bottom: 6px; padding: 0 2px; letter-spacing: 0.3px;
+  }
+  .entry-row {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 10px; margin-bottom: 6px;
+  }
+  .entry-time { color: var(--text2); font-size: 13px; flex-shrink: 0; min-width: 38px; }
+  .entry-val  { font-weight: 700; font-size: 18px; flex: 1; }
+  .entry-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .btn-icon {
+    width: 34px; height: 34px; border: none; border-radius: 8px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent; flex-shrink: 0;
+  }
+  .btn-edit { background: rgba(76,201,240,0.15); color: #4cc9f0; }
+  .btn-del  { background: rgba(230,57,70,0.15);  color: #e63946; }
+  .btn-icon:active { opacity: 0.65; }
+  .entry-edit-input {
+    width: 52px; padding: 6px 4px; flex-shrink: 0;
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    font-size: 18px; font-weight: 700; text-align: center; outline: none;
+    -moz-appearance: textfield;
+  }
+  .entry-edit-input::-webkit-inner-spin-button,
+  .entry-edit-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+  .btn-sm {
+    padding: 7px 10px; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    -webkit-tap-highlight-color: transparent; white-space: nowrap;
+  }
+  .btn-sm-confirm { background: var(--accent); color: #fff; }
+  .btn-sm-cancel  { background: var(--border); color: var(--text2); }
+
+  /* ===== SCREEN 4: SETTINGS ===== */
+  .danger-btn {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: 17px 16px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius); color: var(--text);
+    font-size: 15px; font-weight: 500; cursor: pointer;
+    margin-bottom: 10px; -webkit-tap-highlight-color: transparent; text-align: right;
+  }
+  .danger-btn.red  { border-color: rgba(230,57,70,0.45);  color: var(--red); }
+  .danger-btn.blue { border-color: rgba(76,201,240,0.4);  color: #4cc9f0; }
+  .danger-btn.green{ border-color: rgba(45,198,83,0.4);   color: var(--green); }
+  .danger-btn:active { opacity: 0.75; }
+  .danger-btn svg { opacity: 0.55; flex-shrink: 0; }
+  #settings-feedback { margin-top: 4px; }
+
+  /* ===== CONFIRMATION MODAL ===== */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.78);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 24px;
+  }
+  .modal-overlay.hidden { display: none; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 28px 24px;
+    max-width: 320px; width: 100%; text-align: center;
+  }
+  .modal-box h3 { font-size: 19px; margin-bottom: 10px; }
+  .modal-box p  { font-size: 14px; color: var(--text2); margin-bottom: 24px; line-height: 1.6; }
+  .modal-actions { display: flex; gap: 10px; }
+  .modal-actions button {
+    flex: 1; padding: 14px; border: none; border-radius: 10px;
+    font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+  .modal-cancel  { background: var(--border); color: var(--text); }
+  .modal-confirm { background: var(--accent); color: #fff; }
+
+  /* Day detail picker */
+  .day-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .day-picker label { font-size: 13px; color: var(--text2); flex-shrink: 0; }
+  input[type=date] {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 12px;
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    outline: none;
+    direction: ltr;
+  }
+  input[type=date]::-webkit-calendar-picker-indicator { filter: invert(0.7); cursor: pointer; }
+  #day-detail-canvas { width: 100%; height: 180px; display: block; }
+
+  /* Compare chart legend */
+  .chart-legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    font-size: 13px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+  /* ===== TUNER PANEL (embedded in log screen) ===== */
+  .tuner-panel {
+    width: 100%;
+    max-width: 340px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .tuner-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tuner-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .tuner-toggle-hz { font-size: 13px; color: #4cc9f0; font-weight: 700; }
+  .tuner-chevron { transition: transform 0.25s; color: var(--text2); }
+  .tuner-panel.open .tuner-chevron { transform: rotate(180deg); }
+
+  .tuner-body {
+    display: none;
+    border-top: 1px solid var(--border);
+    padding: 16px;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .tuner-panel.open .tuner-body { display: flex; }
+
+  .tuner-hz {
+    font-size: 52px;
+    font-weight: 900;
+    line-height: 1;
+    color: #4cc9f0;
+    letter-spacing: -2px;
+    text-align: center;
+  }
+  .tuner-hz span { font-size: 17px; font-weight: 500; color: var(--text2); margin-right: 3px; }
+
+  .tuner-section { width: 100%; }
+  .tuner-label { font-size: 13px; color: var(--text2); margin-bottom: 10px; }
+
+  .wave-btns { display: flex; gap: 8px; width: 100%; }
+  .wave-btn {
+    flex: 1;
+    padding: 10px 4px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface2);
+    color: var(--text2);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    -webkit-tap-highlight-color: transparent;
+    text-align: center;
+  }
+  .wave-btn.active { background: rgba(76,201,240,0.15); border-color: #4cc9f0; color: #4cc9f0; }
+
+  .btn-play {
+    width: 100%;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: 700;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-play.stopped { background: #4cc9f0; color: #0f1923; box-shadow: 0 4px 20px rgba(76,201,240,0.3); }
+  .btn-play.playing { background: var(--accent); color: #fff; box-shadow: 0 4px 20px rgba(230,57,70,0.3); }
+  .btn-play:active { transform: scale(0.97); }
+
+  /* Hz badge in entry list */
+  .entry-hz {
+    font-size: 11px;
+    color: #4cc9f0;
+    background: rgba(76,201,240,0.12);
+    border-radius: 6px;
+    padding: 2px 6px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  /* Freq chart */
+  #freq-chart-canvas { width: 100%; height: 160px; display: block; }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SCREEN 1: LOG -->
+  <section id="screen-log" class="screen active">
+    <div class="log-header">
+      <h1>יומן טינטון</h1>
+      <p>רשום את עוצמת הטינטון שלך היום</p>
+    </div>
+    <div class="date-display" id="date-display"></div>
+    <div class="intensity-section">
+      <div class="intensity-label">עוצמה (1–10)</div>
+      <div class="intensity-value" id="intensity-display">5</div>
+      <div class="intensity-slider-wrap">
+        <input type="range" id="intensity-slider" min="1" max="10" value="5" step="1"/>
+        <div class="scale-labels"><span>1 קל</span><span>10 חזק</span></div>
+      </div>
+    </div>
+
+    <!-- Embedded tuner panel -->
+    <div class="tuner-panel" id="tuner-panel">
+      <div class="tuner-toggle" id="tuner-toggle">
+        <div class="tuner-toggle-label">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12 Q5 6 8 12 Q11 18 14 12 Q17 6 20 12 Q21.5 15 22 12"/></svg>
+          כיוון תדר
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="tuner-toggle-hz" id="tuner-toggle-hz"></span>
+          <svg class="tuner-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="tuner-body">
+        <div class="tuner-hz" id="tuner-hz-display">1000<span>Hz</span></div>
+        <div class="tuner-section">
+          <div class="tuner-label">תדר (100 – 14000 Hz)</div>
+          <input type="range" id="log-freq-slider" min="100" max="14000" value="1000" step="10"/>
+          <div class="scale-labels"><span>100</span><span>14000</span></div>
+        </div>
+        <div class="wave-btns">
+          <button class="wave-btn active" data-wave="sine">טון טהור</button>
+          <button class="wave-btn" data-wave="noise">רחש לבן</button>
+          <button class="wave-btn" data-wave="square">גל מרובע</button>
+        </div>
+        <div class="tuner-section">
+          <div class="tuner-label">עוצמה <span id="log-vol-label">50%</span></div>
+          <input type="range" id="log-vol-slider" min="0" max="100" value="50" step="1"/>
+        </div>
+        <button class="btn-play stopped" id="btn-play">▶ הפעל</button>
+      </div>
+    </div>
+
+    <button class="btn-save" id="btn-save">שמור רישום</button>
+    <div class="save-feedback" id="save-feedback">נשמר בהצלחה ✓</div>
+    <div class="all-entries-wrap">
+      <div class="all-entries-header">כל הרישומים</div>
+      <div id="all-entries"></div>
+    </div>
+  </section>
+
+  <!-- SCREEN 2: ANALYSIS -->
+  <section id="screen-analysis" class="screen">
+    <h1>ניתוח</h1>
+
+    <div class="section-card">
+      <h2>מגמה</h2>
+      <div id="trend-display"></div>
+    </div>
+
+    <div class="section-card">
+      <h2>גרף עוצמה</h2>
+      <div class="chart-wrap">
+        <canvas id="chart-canvas"></canvas>
+      </div>
+    </div>
+
+    <div class="section-card" id="freq-chart-card" style="display:none">
+      <h2>גרף תדר (Hz)</h2>
+      <div class="chart-wrap">
+        <canvas id="freq-chart-canvas"></canvas>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h2>פירוט יומי</h2>
+      <div class="day-picker">
+        <label for="day-picker-input">תאריך</label>
+        <input type="date" id="day-picker-input"/>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="day-detail-canvas"></canvas>
+      </div>
+      <div id="day-freq-section" style="display:none">
+        <div style="font-size:14px;font-weight:600;margin:16px 0 8px;color:var(--text2)">תדר יומי (Hz)</div>
+        <div class="chart-wrap">
+          <canvas id="day-freq-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <h2>ממוצעים שבועיים</h2>
+      <div id="weekly-stats"></div>
+    </div>
+  </section>
+
+  <!-- SCREEN 3: COMPARE -->
+  <section id="screen-compare" class="screen">
+    <h1>השוואה</h1>
+
+    <div class="section-card">
+      <h2>השווה שבועות</h2>
+      <div class="compare-controls">
+        <select id="compare-week-a" aria-label="שבוע א"></select>
+        <select id="compare-week-b" aria-label="שבוע ב"></select>
+      </div>
+      <div id="compare-result"></div>
+    </div>
+
+    <div class="section-card">
+      <h2>כל השבועות</h2>
+      <div id="weeks-list"></div>
+    </div>
+  </section>
+
+  <!-- SCREEN 4: SETTINGS -->
+  <section id="screen-settings" class="screen">
+    <h1>הגדרות</h1>
+    <div class="section-card">
+      <h2>ניהול נתונים</h2>
+      <button class="danger-btn" id="btn-delete-today">
+        <span>מחק יום נוכחי</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </button>
+      <button class="danger-btn" id="btn-delete-week">
+        <span>מחק שבוע נוכחי</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </button>
+      <button class="danger-btn red" id="btn-reset-all">
+        <span>איפוס מלא</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </button>
+      <div id="settings-feedback" class="save-feedback"></div>
+    </div>
+
+    <div class="section-card">
+      <h2>ייצוא וייבוא</h2>
+      <button class="danger-btn blue" id="btn-export-json">
+        <span>ייצוא JSON — גיבוי מלא</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="danger-btn blue" id="btn-export-csv">
+        <span>ייצוא CSV — טבלה</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="danger-btn blue" id="btn-export-pdf">
+        <span>ייצוא PDF — דוח</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      </button>
+      <label class="danger-btn green" for="import-file-input" style="cursor:pointer">
+        <span>ייבוא JSON — שחזור</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </label>
+      <input type="file" id="import-file-input" accept=".json" style="display:none"/>
+    </div>
+  </section>
+
+  <!-- CONFIRMATION MODAL -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal-box">
+      <h3 id="modal-title"></h3>
+      <p id="modal-body"></p>
+      <div class="modal-actions">
+        <button class="modal-cancel" id="modal-cancel">ביטול</button>
+        <button class="modal-confirm" id="modal-confirm">מחק</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav>
+    <button class="nav-btn active" data-screen="log" aria-label="יומן">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+      </svg>
+      יומן
+    </button>
+    <button class="nav-btn" data-screen="analysis" aria-label="ניתוח">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      ניתוח
+    </button>
+    <button class="nav-btn" data-screen="compare" aria-label="השוואה">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+        <line x1="6" y1="20" x2="6" y2="14"/>
+      </svg>
+      השוואה
+    </button>
+    <button class="nav-btn" data-screen="settings" aria-label="הגדרות">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+      הגדרות
+    </button>
+  </nav>
+</div>
+
+<script>
+/* ========================================================
+   DATA LAYER
+   Storage format: Array of { ts: ISO string, value: number }
+   ======================================================== */
+const STORAGE_KEY = 'tinnitus_entries';
+
+function loadEntries() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!raw) return [];
+    // Migrate old { "YYYY-MM-DD": number } format
+    if (!Array.isArray(raw)) {
+      return Object.entries(raw).map(([k, v]) => ({ ts: k + 'T12:00:00.000', value: v }));
+    }
+    return raw;
+  } catch { return []; }
+}
+
+function saveEntries(entries) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+}
+
+/* ========================================================
+   HELPERS
+   ======================================================== */
+function isoToDate(iso) { return new Date(iso + 'T00:00:00'); }
+function dateToKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function tsToDateKey(ts) { return dateToKey(new Date(ts)); }
+function todayKey() { return dateToKey(new Date()); }
+
+function formatDate(iso) {
+  return isoToDate(iso).toLocaleDateString('he-IL', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+function formatDateShort(iso) {
+  return isoToDate(iso).toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
+}
+function formatTime(ts) {
+  return new Date(ts).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+}
+
+function weekKey(iso) {
+  const d = isoToDate(iso);
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return dateToKey(mon);
+}
+function weekLabel(wk) {
+  const start = isoToDate(wk);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
+  const fmt = d => d.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' });
+  return `${fmt(start)} – ${fmt(end)}`;
+}
+
+function avg(arr) {
+  if (!arr.length) return null;
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+function round1(n) { return Math.round(n * 10) / 10; }
+
+function intensityColor(v) {
+  if (v <= 3) return '#2dc653';
+  if (v <= 6) return '#f4d03f';
+  return '#e63946';
+}
+
+// Returns { 'YYYY-MM-DD': avgValue } — one averaged value per day
+function dailyAvgs(entries) {
+  const groups = {};
+  entries.forEach(e => {
+    const dk = tsToDateKey(e.ts);
+    if (!groups[dk]) groups[dk] = [];
+    groups[dk].push(e.value);
+  });
+  const result = {};
+  Object.keys(groups).forEach(dk => { result[dk] = round1(avg(groups[dk])); });
+  return result;
+}
+
+// Returns { 'YYYY-MM-DD': avgHz } — only days that have ≥1 entry with hz != null
+function dailyFreqAvgs(entries) {
+  const groups = {};
+  entries.forEach(e => {
+    if (e.hz == null) return;
+    const dk = tsToDateKey(e.ts);
+    if (!groups[dk]) groups[dk] = [];
+    groups[dk].push(e.hz);
+  });
+  const result = {};
+  Object.keys(groups).forEach(dk => { result[dk] = Math.round(avg(groups[dk])); });
+  return result;
+}
+
+// Returns { 'YYYY-MM-DD': [{ts,value,hz},...] } — raw entries grouped by day
+function dailyGroups(entries) {
+  const groups = {};
+  entries.forEach(e => {
+    const dk = tsToDateKey(e.ts);
+    if (!groups[dk]) groups[dk] = [];
+    groups[dk].push(e);
+  });
+  return groups;
+}
+
+// Both of these operate on dailyAvgs output { 'YYYY-MM-DD': number }
+function groupByWeek(dayAvgs) {
+  const weeks = {};
+  Object.keys(dayAvgs).sort().forEach(iso => {
+    const wk = weekKey(iso);
+    if (!weeks[wk]) weeks[wk] = {};
+    weeks[wk][iso] = dayAvgs[iso];
+  });
+  return weeks;
+}
+function weekAvgs(dayAvgs) {
+  const weeks = groupByWeek(dayAvgs);
+  const result = {};
+  Object.keys(weeks).sort().forEach(wk => {
+    result[wk] = round1(avg(Object.values(weeks[wk])));
+  });
+  return result;
+}
+
+/* ========================================================
+   SCREEN 1: LOG
+   ======================================================== */
+const slider   = document.getElementById('intensity-slider');
+const display  = document.getElementById('intensity-display');
+const btnSave  = document.getElementById('btn-save');
+const feedback = document.getElementById('save-feedback');
+const dateDis  = document.getElementById('date-display');
+
+dateDis.textContent = formatDate(todayKey());
+
+slider.addEventListener('input', () => {
+  const v = parseInt(slider.value);
+  display.textContent = v;
+  display.style.color = intensityColor(v);
+});
+display.style.color = intensityColor(parseInt(slider.value));
+
+/* ---- Embedded tuner ---- */
+let audioCtx = null, gainNode = null, sourceNode = null;
+let tunerPlaying = false, tunerWaveType = 'sine';
+
+const freqSlider  = document.getElementById('log-freq-slider');
+const volSlider   = document.getElementById('log-vol-slider');
+const hzDisplay   = document.getElementById('tuner-hz-display');
+const volLabel    = document.getElementById('log-vol-label');
+const btnPlay     = document.getElementById('btn-play');
+const tunerPanel  = document.getElementById('tuner-panel');
+const toggleHzEl  = document.getElementById('tuner-toggle-hz');
+const waveBtns    = document.querySelectorAll('.wave-btn');
+
+function tunerGetFreq() { return parseInt(freqSlider.value); }
+function tunerGetVol()  { return parseInt(volSlider.value) / 100; }
+
+function updateHzDisplay() {
+  const hz = tunerGetFreq();
+  hzDisplay.innerHTML = hz + '<span>Hz</span>';
+  if (tunerPanel.classList.contains('open'))
+    toggleHzEl.textContent = hz + ' Hz';
+}
+function updateVolLabel() { volLabel.textContent = volSlider.value + '%'; }
+
+freqSlider.addEventListener('input', () => {
+  updateHzDisplay();
+  if (tunerPlaying && tunerWaveType !== 'noise' && sourceNode)
+    sourceNode.frequency.setTargetAtTime(tunerGetFreq(), audioCtx.currentTime, 0.01);
+});
+volSlider.addEventListener('input', () => {
+  updateVolLabel();
+  if (gainNode) gainNode.gain.setTargetAtTime(tunerGetVol(), audioCtx.currentTime, 0.01);
+});
+
+waveBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tunerWaveType = btn.dataset.wave;
+    waveBtns.forEach(b => b.classList.toggle('active', b === btn));
+    if (tunerPlaying) { tunerStopSound(); tunerStartSound(); }
+  });
+});
+
+document.getElementById('tuner-toggle').addEventListener('click', () => {
+  const isOpen = tunerPanel.classList.toggle('open');
+  toggleHzEl.textContent = isOpen ? tunerGetFreq() + ' Hz' : '';
+});
+
+function ensureAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function tunerStartSound() {
+  ensureAudioCtx();
+  gainNode = audioCtx.createGain();
+  gainNode.gain.value = tunerGetVol();
+  gainNode.connect(audioCtx.destination);
+
+  if (tunerWaveType === 'noise') {
+    const bufSize = 4096;
+    sourceNode = audioCtx.createScriptProcessor(bufSize, 0, 1);
+    sourceNode.onaudioprocess = ev => {
+      const out = ev.outputBuffer.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) out[i] = Math.random() * 2 - 1;
+    };
+  } else {
+    sourceNode = audioCtx.createOscillator();
+    sourceNode.type = tunerWaveType;
+    sourceNode.frequency.value = tunerGetFreq();
+    sourceNode.start();
+  }
+  sourceNode.connect(gainNode);
+  tunerPlaying = true;
+  btnPlay.textContent = '■ עצור';
+  btnPlay.className = 'btn-play playing';
+}
+
+function tunerStopSound() {
+  if (!sourceNode) return;
+  try { sourceNode.disconnect(); if (sourceNode.stop) sourceNode.stop(); } catch(_) {}
+  sourceNode = null;
+  if (gainNode) { gainNode.disconnect(); gainNode = null; }
+  tunerPlaying = false;
+  btnPlay.textContent = '▶ הפעל';
+  btnPlay.className = 'btn-play stopped';
+}
+
+btnPlay.addEventListener('click', () => tunerPlaying ? tunerStopSound() : tunerStartSound());
+updateVolLabel();
+
+function renderAllEntries() {
+  const entries = loadEntries();
+  const container = document.getElementById('all-entries');
+  if (!entries.length) {
+    container.innerHTML = '<p class="today-empty">אין רישומים עדיין</p>';
+    return;
+  }
+  const groups = dailyGroups(entries);
+  const dayKeys = Object.keys(groups).sort().reverse();
+  container.innerHTML = dayKeys.map(dk => {
+    const dayEntries = groups[dk].slice().sort((a, b) => b.ts.localeCompare(a.ts));
+    const rows = dayEntries.map(e => `
+      <div class="entry-row" data-ts="${e.ts}">
+        <span class="entry-time">${formatTime(e.ts)}</span>
+        <span class="entry-val" style="color:${intensityColor(e.value)}">${e.value}</span>
+        ${e.hz != null ? `<span class="entry-hz">${e.hz}Hz</span>` : ''}
+        <div class="entry-actions">
+          <button class="btn-icon btn-edit" aria-label="ערוך" onclick="startEdit(this,'${e.ts}',${e.value})">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+          <button class="btn-icon btn-del" aria-label="מחק" onclick="deleteEntry('${e.ts}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </button>
+        </div>
+      </div>`).join('');
+    return `<div class="entry-day-group">
+      <div class="entry-day-label">${formatDate(dk)}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+}
+
+function startEdit(btn, ts, currentVal) {
+  const row = btn.closest('.entry-row');
+  const valEl = row.querySelector('.entry-val');
+  const actionsEl = row.querySelector('.entry-actions');
+  valEl.style.display = 'none';
+  actionsEl.style.display = 'none';
+
+  const input = document.createElement('input');
+  input.type = 'number'; input.className = 'entry-edit-input';
+  input.min = 1; input.max = 10; input.value = currentVal;
+
+  const confirmBtn = document.createElement('button');
+  confirmBtn.className = 'btn-sm btn-sm-confirm'; confirmBtn.textContent = '✓';
+  const cancelBtn = document.createElement('button');
+  cancelBtn.className = 'btn-sm btn-sm-cancel'; cancelBtn.textContent = '✕';
+
+  row.insertBefore(input, actionsEl);
+  row.insertBefore(confirmBtn, actionsEl);
+  row.insertBefore(cancelBtn, actionsEl);
+  input.focus(); input.select();
+
+  confirmBtn.addEventListener('click', () => {
+    const newVal = parseInt(input.value);
+    if (newVal >= 1 && newVal <= 10) {
+      const entries = loadEntries();
+      const entry = entries.find(e => e.ts === ts);
+      if (entry) { entry.value = newVal; saveEntries(entries); }
+    }
+    renderAllEntries();
+  });
+  cancelBtn.addEventListener('click', () => renderAllEntries());
+}
+
+function deleteEntry(ts) {
+  saveEntries(loadEntries().filter(e => e.ts !== ts));
+  renderAllEntries();
+}
+
+btnSave.addEventListener('click', () => {
+  const entries = loadEntries();
+  const hz = tunerPanel.classList.contains('open') ? tunerGetFreq() : null;
+  entries.push({ ts: new Date().toISOString(), value: parseInt(slider.value), hz });
+  saveEntries(entries);
+  renderAllEntries();
+  document.getElementById('screen-log').scrollTo(0, 0);
+  feedback.classList.add('show');
+  setTimeout(() => feedback.classList.remove('show'), 2500);
+});
+
+renderAllEntries();
+
+/* ========================================================
+   SCREEN 2: ANALYSIS
+   ======================================================== */
+function renderAnalysis() {
+  const entries = loadEntries();
+  const dayAvgs = dailyAvgs(entries);
+  const keys = Object.keys(dayAvgs).sort();
+  const wkAvgs = weekAvgs(dayAvgs);
+  const wkKeys = Object.keys(wkAvgs).sort();
+  const trendEl = document.getElementById('trend-display');
+
+  // Trend
+  if (wkKeys.length < 2) {
+    trendEl.innerHTML = '<p class="no-data" style="padding:10px 0">נדרשים לפחות שבועיים של נתונים</p>';
+  } else {
+    const last = wkAvgs[wkKeys[wkKeys.length - 1]];
+    const prev = wkAvgs[wkKeys[wkKeys.length - 2]];
+    const diff = last - prev;
+    let cls, icon, label;
+    if (diff < -0.5)     { cls = 'improving'; icon = '↓'; label = 'משתפר'; }
+    else if (diff > 0.5) { cls = 'worsening'; icon = '↑'; label = 'מחמיר'; }
+    else                  { cls = 'stable';    icon = '→'; label = 'יציב'; }
+    trendEl.innerHTML = `
+      <div class="trend-badge ${cls}">${icon} ${label}</div>
+      <div class="stat-row" style="margin-top:12px">
+        <span>שבוע קודם</span><span class="stat-val">${round1(prev)}</span>
+      </div>
+      <div class="stat-row">
+        <span>שבוע נוכחי</span><span class="stat-val">${round1(last)}</span>
+      </div>
+      <div class="stat-row">
+        <span>שינוי</span>
+        <span class="stat-val" style="color:${diff > 0 ? 'var(--red)' : diff < 0 ? 'var(--green)' : 'var(--yellow)'}">
+          ${diff > 0 ? '+' : ''}${round1(diff)}
+        </span>
+      </div>`;
+  }
+
+  // Weekly stats
+  const statsEl = document.getElementById('weekly-stats');
+  if (!wkKeys.length) {
+    statsEl.innerHTML = '<p class="no-data">אין נתונים עדיין</p>';
+  } else {
+    statsEl.innerHTML = [...wkKeys].reverse().map(wk =>
+      `<div class="stat-row"><span>${weekLabel(wk)}</span><span class="stat-val">${wkAvgs[wk]}</span></div>`
+    ).join('');
+  }
+
+  renderChart(dayAvgs, keys);
+  renderFreqChart(entries);
+  initDayPicker(entries);
+}
+
+function initDayPicker(entries) {
+  const today = todayKey();
+  const days = Object.keys(dailyAvgs(entries)).sort();
+  const defaultDay = days.length ? days[days.length - 1] : today;
+
+  // Replace element to drop stale event listeners from previous renderAnalysis calls
+  const old = document.getElementById('day-picker-input');
+  const picker = old.cloneNode(true);
+  old.replaceWith(picker);
+
+  picker.max = today;
+  picker.value = defaultDay;
+  picker.addEventListener('change', () => renderDayDetailChart(picker.value, entries));
+  renderDayDetailChart(defaultDay, entries);
+}
+
+function renderDayDetailChart(dateKey, entries) {
+  const canvas = document.getElementById('day-detail-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth;
+  const H = 180;
+  const DPR = window.devicePixelRatio || 1;
+
+  canvas.width  = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(DPR, DPR);
+
+  const PAD_L = 28, PAD_R = 12, PAD_T = 16, PAD_B = 36;
+  const cW = W - PAD_L - PAD_R;
+  const cH = H - PAD_T - PAD_B;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const dayEntries = entries
+    .filter(e => tsToDateKey(e.ts) === dateKey)
+    .sort((a, b) => a.ts.localeCompare(b.ts));
+
+  if (!dayEntries.length) {
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('אין נתונים ליום זה', W / 2, H / 2);
+    document.getElementById('day-freq-section').style.display = 'none';
+    return;
+  }
+
+  const toHour = ts => { const d = new Date(ts); return d.getHours() + d.getMinutes() / 60; };
+  const hours = dayEntries.map(e => toHour(e.ts));
+  const minH = Math.max(0,  Math.floor(Math.min(...hours)) - 1);
+  const maxH = Math.min(24, Math.ceil(Math.max(...hours))  + 1);
+  const span = Math.max(maxH - minH, 2);
+
+  const xOf = h => PAD_L + ((h - minH) / span) * cW;
+  const yOf = v => PAD_T + cH - ((v - 1) / 9) * cH;
+
+  // Horizontal grid + y-labels
+  ctx.strokeStyle = '#2a3a5e';
+  ctx.lineWidth = 1;
+  [1, 3, 5, 7, 10].forEach(v => {
+    const y = yOf(v);
+    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
+    ctx.fillStyle = '#9ca3af'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(v, PAD_L - 4, y + 4);
+  });
+
+  // Vertical hour ticks + labels
+  for (let h = Math.ceil(minH); h <= Math.floor(maxH); h++) {
+    if (h <= minH + 0.3 || h >= maxH - 0.3) continue;
+    const x = xOf(h);
+    ctx.strokeStyle = '#2a3a5e'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(x, PAD_T); ctx.lineTo(x, PAD_T + cH); ctx.stroke();
+    ctx.fillStyle = '#9ca3af'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(String(h).padStart(2, '0') + ':00', x, H - PAD_B + 16);
+  }
+
+  // Line
+  ctx.beginPath();
+  dayEntries.forEach((e, i) => {
+    const x = xOf(toHour(e.ts)), y = yOf(e.value);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#f4a261'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+
+  // Dots
+  dayEntries.forEach(e => {
+    const x = xOf(toHour(e.ts)), y = yOf(e.value);
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = intensityColor(e.value); ctx.fill();
+    ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.5; ctx.stroke();
+  });
+
+  renderDayFreqDetail(dayEntries, minH, maxH, span);
+}
+
+function renderDayFreqDetail(dayEntries, minH, maxH, span) {
+  const section = document.getElementById('day-freq-section');
+  const freqEntries = dayEntries.filter(e => e.hz != null);
+  if (!freqEntries.length) { section.style.display = 'none'; return; }
+  section.style.display = '';
+
+  const canvas = document.getElementById('day-freq-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth;
+  const H = 160;
+  const DPR = window.devicePixelRatio || 1;
+
+  canvas.width  = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(DPR, DPR);
+
+  const PAD_L = 44, PAD_R = 12, PAD_T = 14, PAD_B = 30;
+  const cW = W - PAD_L - PAD_R;
+  const cH = H - PAD_T - PAD_B;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const toHour = ts => { const d = new Date(ts); return d.getHours() + d.getMinutes() / 60; };
+  const xOf = h => PAD_L + ((h - minH) / span) * cW;
+
+  const hzVals = freqEntries.map(e => e.hz);
+  const minHz  = Math.max(0, Math.min(...hzVals) - 300);
+  const maxHz  = Math.max(...hzVals) + 300;
+  const hzSpan = Math.max(maxHz - minHz, 500);
+  const yOf    = v => PAD_T + cH - ((v - minHz) / hzSpan) * cH;
+
+  // Horizontal grid + y-labels (3 levels)
+  ctx.strokeStyle = '#2a3a5e'; ctx.lineWidth = 1;
+  [minHz, Math.round((minHz + maxHz) / 2), maxHz].forEach(v => {
+    const y = yOf(v);
+    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
+    ctx.fillStyle = '#9ca3af'; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v, PAD_L - 4, y + 4);
+  });
+
+  // Vertical hour ticks + labels (same range as intensity chart)
+  for (let h = Math.ceil(minH); h <= Math.floor(maxH); h++) {
+    if (h <= minH + 0.3 || h >= maxH - 0.3) continue;
+    const x = xOf(h);
+    ctx.strokeStyle = '#2a3a5e'; ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(x, PAD_T); ctx.lineTo(x, PAD_T + cH); ctx.stroke();
+    ctx.fillStyle = '#9ca3af'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(String(h).padStart(2, '0') + ':00', x, H - PAD_B + 14);
+  }
+
+  // Line (gaps are OK — freqEntries are already consecutive with-hz entries)
+  ctx.beginPath();
+  freqEntries.forEach((e, i) => {
+    const x = xOf(toHour(e.ts)), y = yOf(e.hz);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#4cc9f0'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+
+  // Dots
+  freqEntries.forEach(e => {
+    const x = xOf(toHour(e.ts)), y = yOf(e.hz);
+    ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#4cc9f0'; ctx.fill();
+    ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.5; ctx.stroke();
+  });
+}
+
+function renderChart(dayAvgs, keys) {
+  const canvas = document.getElementById('chart-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth;
+  const H = 200;
+  const DPR = window.devicePixelRatio || 1;
+
+  canvas.width  = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(DPR, DPR);
+
+  const PAD_L = 28, PAD_R = 12, PAD_T = 16, PAD_B = 36;
+  const cW = W - PAD_L - PAD_R;
+  const cH = H - PAD_T - PAD_B;
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (!keys.length) {
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('אין נתונים עדיין', W / 2, H / 2);
+    return;
+  }
+
+  const n = keys.length;
+  const xOf = i => PAD_L + (n === 1 ? cW / 2 : i * cW / (n - 1));
+  const yOf = v => PAD_T + cH - ((v - 1) / 9) * cH;
+
+  // Grid
+  ctx.strokeStyle = '#2a3a5e';
+  ctx.lineWidth = 1;
+  [1, 3, 5, 7, 10].forEach(v => {
+    const y = yOf(v);
+    ctx.beginPath();
+    ctx.moveTo(PAD_L, y);
+    ctx.lineTo(W - PAD_R, y);
+    ctx.stroke();
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '10px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(v, PAD_L - 4, y + 4);
+  });
+
+  // Line
+  ctx.beginPath();
+  keys.forEach((k, i) => {
+    const x = xOf(i), y = yOf(dayAvgs[k]);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#e63946';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+
+  // Fill
+  ctx.beginPath();
+  keys.forEach((k, i) => {
+    const x = xOf(i), y = yOf(dayAvgs[k]);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(xOf(n - 1), PAD_T + cH);
+  ctx.lineTo(xOf(0), PAD_T + cH);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, PAD_T, 0, PAD_T + cH);
+  grad.addColorStop(0, 'rgba(230,57,70,0.3)');
+  grad.addColorStop(1, 'rgba(230,57,70,0)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Dots & labels
+  const step = Math.max(1, Math.floor(n / 7));
+  keys.forEach((k, i) => {
+    const x = xOf(i), y = yOf(dayAvgs[k]);
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = intensityColor(dayAvgs[k]);
+    ctx.fill();
+    ctx.strokeStyle = '#1a1a2e';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    if (i % step === 0 || i === n - 1) {
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(formatDateShort(k), x, H - PAD_B + 16);
+    }
+  });
+}
+
+function renderFreqChart(entries) {
+  const freqAvgs = dailyFreqAvgs(entries);
+  const keys = Object.keys(freqAvgs).sort();
+  const card = document.getElementById('freq-chart-card');
+  card.style.display = keys.length ? '' : 'none';
+  if (!keys.length) return;
+
+  const canvas = document.getElementById('freq-chart-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.parentElement.clientWidth;
+  const H = 160;
+  const DPR = window.devicePixelRatio || 1;
+
+  canvas.width  = W * DPR;
+  canvas.height = H * DPR;
+  canvas.style.width  = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.scale(DPR, DPR);
+
+  const PAD_L = 44, PAD_R = 12, PAD_T = 14, PAD_B = 30;
+  const cW = W - PAD_L - PAD_R;
+  const cH = H - PAD_T - PAD_B;
+
+  ctx.clearRect(0, 0, W, H);
+
+  const vals = keys.map(k => freqAvgs[k]);
+  const minHz = Math.max(0, Math.min(...vals) - 200);
+  const maxHz = Math.max(...vals) + 200;
+  const span  = Math.max(maxHz - minHz, 500);
+
+  const n   = keys.length;
+  const xOf = i => PAD_L + (n === 1 ? cW / 2 : i * cW / (n - 1));
+  const yOf = v => PAD_T + cH - ((v - minHz) / span) * cH;
+
+  // Grid lines + y-labels (3 levels)
+  ctx.strokeStyle = '#2a3a5e'; ctx.lineWidth = 1;
+  [minHz, Math.round((minHz + maxHz) / 2), maxHz].forEach(v => {
+    const y = yOf(v);
+    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
+    ctx.fillStyle = '#9ca3af'; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
+    ctx.fillText(v >= 1000 ? (v/1000).toFixed(1)+'k' : v, PAD_L - 4, y + 4);
+  });
+
+  // Fill
+  ctx.beginPath();
+  keys.forEach((k, i) => { const x = xOf(i), y = yOf(freqAvgs[k]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.lineTo(xOf(n - 1), PAD_T + cH); ctx.lineTo(xOf(0), PAD_T + cH); ctx.closePath();
+  const grad = ctx.createLinearGradient(0, PAD_T, 0, PAD_T + cH);
+  grad.addColorStop(0, 'rgba(76,201,240,0.25)'); grad.addColorStop(1, 'rgba(76,201,240,0)');
+  ctx.fillStyle = grad; ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  keys.forEach((k, i) => { const x = xOf(i), y = yOf(freqAvgs[k]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.strokeStyle = '#4cc9f0'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
+
+  // Dots + date labels
+  const step = Math.max(1, Math.floor(n / 7));
+  keys.forEach((k, i) => {
+    const x = xOf(i), y = yOf(freqAvgs[k]);
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#4cc9f0'; ctx.fill();
+    ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.5; ctx.stroke();
+    if (i % step === 0 || i === n - 1) {
+      ctx.fillStyle = '#9ca3af'; ctx.font = '9px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(formatDateShort(k), x, H - PAD_B + 14);
+    }
+  });
+}
+
+/* ========================================================
+   SCREEN 3: COMPARE
+   ======================================================== */
+function renderCompare() {
+  const entries = loadEntries();
+  const dayAvgs = dailyAvgs(entries);
+  const groups  = dailyGroups(entries);
+  const wkAvgs  = weekAvgs(dayAvgs);
+  const weeks   = groupByWeek(dayAvgs);
+  const wkKeys  = Object.keys(wkAvgs).sort().reverse();
+
+  // Expandable week list
+  const listEl = document.getElementById('weeks-list');
+  if (!wkKeys.length) {
+    listEl.innerHTML = '<p class="no-data">אין נתונים עדיין</p>';
+  } else {
+    listEl.innerHTML = wkKeys.map(wk => {
+      const dayKeys = Object.keys(weeks[wk]).sort();
+      const days = dayKeys.map(iso => {
+        const dayName = isoToDate(iso).toLocaleDateString('he-IL', { weekday: 'long' });
+        const v = dayAvgs[iso];
+        const count = groups[iso] ? groups[iso].length : 1;
+        const countLabel = count > 1 ? ` <span class="entry-count">(${count})</span>` : '';
+        return `<div class="day-entry">
+          <span class="day-name">${dayName} ${formatDateShort(iso)}</span>
+          <span class="day-val" style="color:${intensityColor(v)}">${v}${countLabel}</span>
+        </div>`;
+      }).join('');
+      return `<div class="week-row" data-wk="${wk}">
+        <div class="week-header">
+          <span class="week-label">${weekLabel(wk)}</span>
+          <span style="display:flex;align-items:center;gap:10px">
+            <span class="week-avg">${wkAvgs[wk]}</span>
+            <svg class="week-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </span>
+        </div>
+        <div class="week-days">${days}</div>
+      </div>`;
+    }).join('');
+    listEl.querySelectorAll('.week-header').forEach(h => {
+      h.addEventListener('click', () => h.closest('.week-row').classList.toggle('open'));
+    });
+  }
+
+  // Compare selectors
+  const selA = document.getElementById('compare-week-a');
+  const selB = document.getElementById('compare-week-b');
+  const opts = wkKeys.map(wk => `<option value="${wk}">${weekLabel(wk)}</option>`).join('');
+  selA.innerHTML = opts;
+  selB.innerHTML = opts;
+  if (wkKeys.length > 1) selB.value = wkKeys[1];
+
+  function updateCompare() {
+    renderCompareChart(selA.value, selB.value, weeks, wkAvgs, entries);
+  }
+
+  selA.addEventListener('change', updateCompare);
+  selB.addEventListener('change', updateCompare);
+  updateCompare();
+}
+
+function renderCompareChart(wkA, wkB, weeks, wkAvgs, entries) {
+  const resultEl = document.getElementById('compare-result');
+
+  if (!wkA || !wkB || wkA === wkB) {
+    resultEl.innerHTML = '<p style="color:var(--text2);font-size:14px">בחר שני שבועות שונים</p>';
+    return;
+  }
+
+  const freqAvgs = dailyFreqAvgs(entries);
+
+  resultEl.innerHTML = `
+    <canvas id="compare-canvas" style="display:block"></canvas>
+    <div class="chart-legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#e63946"></div><span>${weekLabel(wkA)}</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#4cc9f0"></div><span>${weekLabel(wkB)}</span></div>
+    </div>`;
+
+  const dows = ['ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳', 'א׳'];
+
+  // Build [value|null] × 7 for a given week from dayAvgs map
+  function weekDayValues(wk, avgsMap) {
+    const start = isoToDate(wk);
+    return Array.from({ length: 7 }, (_, d) => {
+      const dt = new Date(start); dt.setDate(start.getDate() + d);
+      const key = dateToKey(dt);
+      const wkDays = avgsMap[wk];
+      return (wkDays && wkDays[key] !== undefined) ? wkDays[key] : null;
+    });
+  }
+
+  function drawCanvas(canvasId, yOf, gridVals, formatYLabel, valuesA, valuesB) {
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    const W = resultEl.clientWidth;
+    const H = 180;
+    const DPR = window.devicePixelRatio || 1;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+    ctx.scale(DPR, DPR);
+
+    const PAD_L = 38, PAD_R = 12, PAD_T = 14, PAD_B = 30;
+    const cW = W - PAD_L - PAD_R, cH = H - PAD_T - PAD_B;
+    const xOf = d => PAD_L + d * cW / 6;
+    const yOfScaled = v => PAD_T + cH - yOf(v) * cH;
+
+    // Grid
+    ctx.strokeStyle = '#2a3a5e'; ctx.lineWidth = 1;
+    gridVals.forEach(v => {
+      const y = yOfScaled(v);
+      ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
+      ctx.fillStyle = '#9ca3af'; ctx.font = '9px sans-serif'; ctx.textAlign = 'right';
+      ctx.fillText(formatYLabel(v), PAD_L - 4, y + 4);
+    });
+    dows.forEach((label, i) => {
+      ctx.fillStyle = '#9ca3af'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(label, xOf(i), H - PAD_B + 14);
+    });
+
+    function drawLine(values, color) {
+      ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+      ctx.beginPath(); let pen = false;
+      values.forEach((v, i) => {
+        if (v === null) { pen = false; return; }
+        const x = xOf(i), y = yOfScaled(v);
+        pen ? ctx.lineTo(x, y) : ctx.moveTo(x, y); pen = true;
+      });
+      ctx.stroke();
+      values.forEach((v, i) => {
+        if (v === null) return;
+        const x = xOf(i), y = yOfScaled(v);
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = color; ctx.fill();
+        ctx.strokeStyle = '#1a1a2e'; ctx.lineWidth = 1.5; ctx.stroke();
+      });
+    }
+    drawLine(valuesA, '#e63946');
+    drawLine(valuesB, '#4cc9f0');
+  }
+
+  // --- Intensity chart ---
+  const intA = weekDayValues(wkA, weeks);
+  const intB = weekDayValues(wkB, weeks);
+  drawCanvas('compare-canvas',
+    v => (v - 1) / 9,
+    [1, 3, 5, 7, 10], v => v,
+    intA, intB);
+
+  // --- Frequency chart (only if there's freq data in either week) ---
+  const freqWeeks = { [wkA]: {}, [wkB]: {} };
+  [wkA, wkB].forEach(wk => {
+    const start = isoToDate(wk);
+    for (let d = 0; d < 7; d++) {
+      const dt = new Date(start); dt.setDate(start.getDate() + d);
+      const key = dateToKey(dt);
+      if (freqAvgs[key] !== undefined) freqWeeks[wk][key] = freqAvgs[key];
+    }
+  });
+  const freqA = weekDayValues(wkA, freqWeeks);
+  const freqB = weekDayValues(wkB, freqWeeks);
+  const hasFreq = [...freqA, ...freqB].some(v => v !== null);
+
+  if (hasFreq) {
+    resultEl.insertAdjacentHTML('beforeend', `
+      <div style="margin-top:14px;font-size:13px;color:var(--text2);margin-bottom:6px">תדר (Hz)</div>
+      <canvas id="compare-freq-canvas" style="display:block"></canvas>`);
+
+    const allHz = [...freqA, ...freqB].filter(v => v !== null);
+    const minHz = Math.max(0, Math.min(...allHz) - 300);
+    const maxHz = Math.max(...allHz) + 300;
+    const span  = Math.max(maxHz - minHz, 500);
+    const midHz = Math.round((minHz + maxHz) / 2);
+    drawCanvas('compare-freq-canvas',
+      v => (v - minHz) / span,
+      [minHz, midHz, maxHz], v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v,
+      freqA, freqB);
+  }
+}
+
+/* ========================================================
+   NAVIGATION
+   ======================================================== */
+const navBtns = document.querySelectorAll('.nav-btn');
+const screens = document.querySelectorAll('.screen');
+
+navBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.screen;
+    if (target !== 'log' && tunerPlaying) tunerStopSound();
+    navBtns.forEach(b => b.classList.toggle('active', b === btn));
+    screens.forEach(s => {
+      s.classList.toggle('active', s.id === 'screen-' + target);
+    });
+    if (target === 'analysis') renderAnalysis();
+    if (target === 'compare')  renderCompare();
+  });
+});
+
+/* ========================================================
+   SCREEN 4: SETTINGS
+   ======================================================== */
+function showModal(title, body, onConfirm, confirmLabel = 'מחק') {
+  const overlay = document.getElementById('modal-overlay');
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').textContent = body;
+  overlay.classList.remove('hidden');
+
+  // Clone buttons to drop stale listeners
+  const oldConfirm = document.getElementById('modal-confirm');
+  const oldCancel  = document.getElementById('modal-cancel');
+  const newConfirm = oldConfirm.cloneNode(true);
+  const newCancel  = oldCancel.cloneNode(true);
+  newConfirm.textContent = confirmLabel;
+  oldConfirm.replaceWith(newConfirm);
+  oldCancel.replaceWith(newCancel);
+
+  const close = () => overlay.classList.add('hidden');
+  document.getElementById('modal-confirm').addEventListener('click', () => { onConfirm(); close(); });
+  document.getElementById('modal-cancel').addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); }, { once: true });
+}
+
+function showSettingsFeedback(msg) {
+  const el = document.getElementById('settings-feedback');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+document.getElementById('btn-delete-today').addEventListener('click', () => {
+  const today = todayKey();
+  const count = loadEntries().filter(e => tsToDateKey(e.ts) === today).length;
+  if (!count) { showSettingsFeedback('אין רישומים להיום'); return; }
+  showModal('מחק יום נוכחי', `פעולה זו תמחק ${count} רישום/ים של היום לצמיתות.`, () => {
+    saveEntries(loadEntries().filter(e => tsToDateKey(e.ts) !== today));
+    renderAllEntries();
+    showSettingsFeedback('רישומי היום נמחקו');
+  });
+});
+
+document.getElementById('btn-delete-week').addEventListener('click', () => {
+  const wk = weekKey(todayKey());
+  const count = loadEntries().filter(e => weekKey(tsToDateKey(e.ts)) === wk).length;
+  if (!count) { showSettingsFeedback('אין רישומים לשבוע הנוכחי'); return; }
+  showModal('מחק שבוע נוכחי', `פעולה זו תמחק ${count} רישום/ים של השבוע הנוכחי לצמיתות.`, () => {
+    saveEntries(loadEntries().filter(e => weekKey(tsToDateKey(e.ts)) !== wk));
+    renderAllEntries();
+    showSettingsFeedback('רישומי השבוע נמחקו');
+  });
+});
+
+document.getElementById('btn-reset-all').addEventListener('click', () => {
+  const count = loadEntries().length;
+  if (!count) { showSettingsFeedback('אין נתונים למחיקה'); return; }
+  showModal('איפוס מלא', `פעולה זו תמחק את כל ${count} הרישומים לצמיתות. לא ניתן לשחזר אותם.`, () => {
+    saveEntries([]);
+    renderAllEntries();
+    showSettingsFeedback('כל הנתונים נמחקו');
+  });
+});
+
+
+/* ========================================================
+   EXPORT / IMPORT
+   ======================================================== */
+function triggerDownload(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ---- JSON export ----
+document.getElementById('btn-export-json').addEventListener('click', () => {
+  const entries = loadEntries();
+  if (!entries.length) { showSettingsFeedback('אין נתונים לייצוא'); return; }
+  triggerDownload(JSON.stringify(entries, null, 2), 'tinnitus-backup.json', 'application/json');
+  showSettingsFeedback('קובץ JSON הורד בהצלחה');
+});
+
+// ---- CSV export ----
+document.getElementById('btn-export-csv').addEventListener('click', () => {
+  const entries = loadEntries();
+  if (!entries.length) { showSettingsFeedback('אין נתונים לייצוא'); return; }
+  const rows = [['תאריך', 'שעה', 'עוצמה', 'תדר (Hz)']];
+  [...entries].sort((a, b) => a.ts.localeCompare(b.ts)).forEach(e => {
+    const d = new Date(e.ts);
+    const date = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+    const time = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+    rows.push([date, time, e.value, e.hz != null ? e.hz : '']);
+  });
+  const csv = rows.map(r => r.join(',')).join('\r\n');
+  triggerDownload('\ufeff' + csv, 'tinnitus-data.csv', 'text/csv;charset=utf-8');
+  showSettingsFeedback('קובץ CSV הורד בהצלחה');
+});
+
+// ---- PDF export ----
+function buildPdfChartImg(dayAvgs, keys) {
+  const canvas = document.createElement('canvas');
+  const W = 680, H = 220;
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, W, H);
+
+  const PAD_L = 32, PAD_R = 16, PAD_T = 16, PAD_B = 40;
+  const cW = W - PAD_L - PAD_R, cH = H - PAD_T - PAD_B;
+  const n = keys.length;
+  const xOf = i => PAD_L + (n === 1 ? cW / 2 : i * cW / (n - 1));
+  const yOf = v => PAD_T + cH - ((v - 1) / 9) * cH;
+
+  // Grid
+  ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1;
+  [1, 3, 5, 7, 10].forEach(v => {
+    const y = yOf(v);
+    ctx.beginPath(); ctx.moveTo(PAD_L, y); ctx.lineTo(W - PAD_R, y); ctx.stroke();
+    ctx.fillStyle = '#888'; ctx.font = '11px Arial'; ctx.textAlign = 'right';
+    ctx.fillText(v, PAD_L - 4, y + 4);
+  });
+
+  // Fill
+  ctx.beginPath();
+  keys.forEach((k, i) => { const x = xOf(i), y = yOf(dayAvgs[k]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.lineTo(xOf(n - 1), PAD_T + cH); ctx.lineTo(xOf(0), PAD_T + cH); ctx.closePath();
+  ctx.fillStyle = 'rgba(230,57,70,0.1)'; ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  keys.forEach((k, i) => { const x = xOf(i), y = yOf(dayAvgs[k]); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
+  ctx.strokeStyle = '#e63946'; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.stroke();
+
+  // Dots + date labels
+  const step = Math.max(1, Math.floor(n / 10));
+  keys.forEach((k, i) => {
+    const x = xOf(i), y = yOf(dayAvgs[k]);
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#e63946'; ctx.fill();
+    if (i % step === 0 || i === n - 1) {
+      ctx.fillStyle = '#888'; ctx.font = '10px Arial'; ctx.textAlign = 'center';
+      ctx.fillText(formatDateShort(k), x, H - PAD_B + 16);
+    }
+  });
+
+  return canvas.toDataURL('image/png');
+}
+
+document.getElementById('btn-export-pdf').addEventListener('click', () => {
+  const entries = loadEntries();
+  if (!entries.length) { showSettingsFeedback('אין נתונים לייצוא'); return; }
+
+  const dayAvgs = dailyAvgs(entries);
+  const keys    = Object.keys(dayAvgs).sort();
+  const wkAvgs  = weekAvgs(dayAvgs);
+  const wkKeys  = Object.keys(wkAvgs).sort();
+
+  const total = entries.length;
+  const allVals = entries.map(e => e.value);
+  const overallAvg = round1(allVals.reduce((a, b) => a + b, 0) / allVals.length);
+  const startDate = formatDate(keys[0]);
+
+  let trendText = 'לא מספיק נתונים';
+  if (wkKeys.length >= 2) {
+    const last = wkAvgs[wkKeys[wkKeys.length - 1]];
+    const prev = wkAvgs[wkKeys[wkKeys.length - 2]];
+    const diff = round1(last - prev);
+    if (diff < -0.5)     trendText = `משתפר (${diff})`;
+    else if (diff > 0.5) trendText = `מחמיר (+${diff})`;
+    else                 trendText = `יציב (${diff > 0 ? '+' : ''}${diff})`;
+  }
+
+  const freqEntries = [...entries].filter(e => e.hz != null).sort((a, b) => a.ts.localeCompare(b.ts));
+  const firstFreq = freqEntries.length ? freqEntries[0].hz : null;
+  const lastFreq  = freqEntries.length ? freqEntries[freqEntries.length - 1].hz : null;
+  const chartImg = buildPdfChartImg(dayAvgs, keys);
+
+  const reportDate = new Date().toLocaleDateString('he-IL', { year: 'numeric', month: 'long', day: 'numeric' });
+
+  const weekRows = [...wkKeys].reverse().map(wk =>
+    `<tr><td>${weekLabel(wk)}</td><td style="text-align:center;font-weight:700">${wkAvgs[wk]}</td></tr>`
+  ).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<title>דוח מעקב טנטון</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #111; padding: 36px 44px; direction: rtl; font-size: 14px; line-height: 1.5; }
+  h1  { font-size: 26px; font-weight: 700; margin-bottom: 4px; }
+  h2  { font-size: 16px; font-weight: 700; border-bottom: 2px solid #222; padding-bottom: 6px; margin-bottom: 14px; }
+  .subtitle { font-size: 13px; color: #666; margin-bottom: 32px; }
+  section  { margin-bottom: 30px; }
+  .grid    { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 32px; }
+  .kv      { border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 14px; }
+  .kv span { font-size: 12px; color: #666; display: block; }
+  .kv strong { font-size: 20px; }
+  img { width: 100%; height: auto; border: 1px solid #e0e0e0; border-radius: 4px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { background: #f4f4f4; padding: 9px 12px; text-align: right; font-size: 13px; }
+  td { padding: 8px 12px; border-bottom: 1px solid #eee; }
+  @media print {
+    body { padding: 0; }
+    @page { margin: 1.5cm; }
+  }
+</style>
+</head>
+<body>
+<h1>דוח מעקב טנטון</h1>
+<p class="subtitle">תאריך הפקה: ${reportDate}</p>
+
+<section>
+  <h2>סיכום</h2>
+  <div class="grid">
+    <div class="kv"><span>תחילת מעקב</span><strong>${startDate}</strong></div>
+    <div class="kv"><span>סה"כ רישומים</span><strong>${total}</strong></div>
+    <div class="kv"><span>ממוצע עוצמה כולל</span><strong>${overallAvg} / 10</strong></div>
+    <div class="kv"><span>מגמה</span><strong>${trendText}</strong></div>
+  </div>
+</section>
+
+<section>
+  <h2>גרף עוצמה לאורך זמן</h2>
+  <img src="${chartImg}" alt="גרף עוצמה"/>
+</section>
+
+<section>
+  <h2>ממוצעים שבועיים</h2>
+  <table>
+    <thead><tr><th>שבוע</th><th style="text-align:center">ממוצע עוצמה</th></tr></thead>
+    <tbody>${weekRows}</tbody>
+  </table>
+</section>
+
+${firstFreq != null ? `
+<section>
+  <h2>היסטוריית תדר</h2>
+  <div class="grid">
+    <div class="kv"><span>תדר ראשון שנרשם</span><strong>${firstFreq} Hz</strong></div>
+    <div class="kv"><span>תדר אחרון שנרשם</span><strong>${lastFreq} Hz</strong></div>
+    ${firstFreq !== lastFreq ? `<div class="kv" style="grid-column:span 2"><span>שינוי</span><strong style="color:${lastFreq > firstFreq ? '#c0392b' : '#27ae60'}">${lastFreq > firstFreq ? '+' : ''}${lastFreq - firstFreq} Hz</strong></div>` : ''}
+  </div>
+</section>` : ''}
+</body>
+</html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) { showSettingsFeedback('אפשר חלונות קופצים ונסה שוב'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 500);
+});
+
+// ---- JSON import ----
+document.getElementById('import-file-input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data)) throw new Error();
+      const valid = data.filter(item => item.ts && typeof item.value === 'number');
+      if (!valid.length) throw new Error();
+      showModal(
+        'ייבוא נתונים',
+        `נמצאו ${valid.length} רישומים. ייבוא יחליף את כל הנתונים הקיימים. לא ניתן לשחזר את הנתונים הקודמים.`,
+        () => {
+          saveEntries(valid);
+          renderAllEntries();
+          showSettingsFeedback(`יובאו ${valid.length} רישומים בהצלחה`);
+        },
+        'ייבא'
+      );
+    } catch(_) {
+      showSettingsFeedback('שגיאה: קובץ לא תקין');
+    }
+    this.value = '';
+  };
+  reader.readAsText(file);
+});
+
+/* ========================================================
+   SERVICE WORKER
+   ======================================================== */
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
