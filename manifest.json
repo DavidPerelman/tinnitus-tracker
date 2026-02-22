@@ -2,7 +2,7 @@
   "name": "מעקב טינטון",
   "short_name": "טינטון",
   "description": "מעקב אחר עוצמת טינטון יומית",
-  "start_url": "/tinnitus-tracker/",
+  "start_url": "/tinnitus-tracker/index.html",
   "scope": "/tinnitus-tracker/",
   "display": "standalone",
   "background_color": "#1a1a2e",
