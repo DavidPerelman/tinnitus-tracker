@@ -585,7 +585,8 @@
   .reminder-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 4px 10px;
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -593,7 +594,25 @@
   }
   .reminder-time { font-weight: 700; font-size: 17px; min-width: 44px; direction: ltr; }
   .reminder-label { flex: 1; font-size: 14px; color: var(--text2); }
+  .reminder-days { width: 100%; font-size: 11px; color: #4cc9f0; padding-top: 2px; }
   .reminder-empty { font-size: 13px; color: var(--text2); text-align: center; padding: 8px 0; }
+
+  .day-pick-row { display: flex; gap: 4px; margin-bottom: 10px; }
+  .day-btn {
+    flex: 1;
+    padding: 7px 2px;
+    font-size: 12px;
+    font-family: inherit;
+    border-radius: 8px;
+    border: 1.5px solid rgba(255,255,255,0.15);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .day-btn.active { background: #4cc9f0; color: #0f1923; border-color: #4cc9f0; }
 
   .notif-status {
     font-size: 12px;
@@ -779,6 +798,15 @@
         <input type="time" id="reminder-time" value="08:00"/>
         <input type="text" id="reminder-label-input" placeholder="תווית (אופציונלי)" maxlength="30"/>
         <button class="btn-reminder-add" id="btn-add-reminder" aria-label="הוסף תזכורת">+</button>
+      </div>
+      <div class="day-pick-row" id="day-pick-row">
+        <button class="day-btn active" data-day="0">א׳</button>
+        <button class="day-btn active" data-day="1">ב׳</button>
+        <button class="day-btn active" data-day="2">ג׳</button>
+        <button class="day-btn active" data-day="3">ד׳</button>
+        <button class="day-btn active" data-day="4">ה׳</button>
+        <button class="day-btn active" data-day="5">ו׳</button>
+        <button class="day-btn active" data-day="6">ש׳</button>
       </div>
       <div class="reminder-list" id="reminder-list"></div>
     </div>
@@ -1812,6 +1840,8 @@ document.getElementById('btn-reset-all').addEventListener('click', () => {
    REMINDERS
    ======================================================== */
 const REMINDERS_KEY = 'tinnitus_reminders';
+const DAY_NAMES     = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'];
+const ALL_DAYS      = [0,1,2,3,4,5,6];
 
 function loadReminders() {
   try { return JSON.parse(localStorage.getItem(REMINDERS_KEY)) || []; }
@@ -1821,8 +1851,24 @@ function saveReminders(list) {
   localStorage.setItem(REMINDERS_KEY, JSON.stringify(list));
 }
 
-// Schedule all active reminders using setTimeout loops.
-// Keeps a map of timerId per reminder id so they can be cancelled.
+// Migrate reminders saved before days-of-week was added
+(function migrateReminders() {
+  const list = loadReminders();
+  let changed = false;
+  list.forEach(r => { if (!r.days) { r.days = ALL_DAYS.slice(); changed = true; } });
+  if (changed) saveReminders(list);
+})();
+
+// Wire day-pick toggle buttons
+document.querySelectorAll('#day-pick-row .day-btn').forEach(btn => {
+  btn.addEventListener('click', () => btn.classList.toggle('active'));
+});
+function getSelectedDays() {
+  const active = [...document.querySelectorAll('#day-pick-row .day-btn.active')].map(b => +b.dataset.day);
+  return active.length ? active : ALL_DAYS.slice();
+}
+
+// setTimeout-based fallback scheduler (fires when app is open)
 const reminderTimers = {};
 
 function msUntil(hhmm) {
@@ -1835,16 +1881,17 @@ function msUntil(hhmm) {
 
 function scheduleReminder(r) {
   clearTimeout(reminderTimers[r.id]);
+  const days = r.days && r.days.length ? r.days : ALL_DAYS;
   function arm() {
     reminderTimers[r.id] = setTimeout(() => {
-      if (Notification.permission === 'granted') {
+      if (Notification.permission === 'granted' && days.includes(new Date().getDay())) {
         new Notification('מעקב טינטון', {
           body: r.label ? `${r.label} — זמן לרשום את עוצמת הטינטון` : 'זמן לרשום את עוצמת הטינטון',
           icon: '/tinnitus-tracker/icon.svg',
           tag: `reminder-${r.id}`
         });
       }
-      arm(); // reschedule for the next day
+      arm();
     }, msUntil(r.time));
   }
   arm();
@@ -1862,20 +1909,27 @@ function renderReminderList() {
     el.innerHTML = '<p class="reminder-empty">אין תזכורות מוגדרות</p>';
     return;
   }
-  el.innerHTML = list.map(r => `
+  el.innerHTML = list.map(r => {
+    const days      = r.days && r.days.length ? r.days : ALL_DAYS;
+    const daysLabel = days.length === 7 ? 'כל יום' : days.map(d => DAY_NAMES[d]).join(' ');
+    return `
     <div class="reminder-item">
       <span class="reminder-time">${r.time}</span>
       <span class="reminder-label">${r.label || ''}</span>
       <button class="btn-icon btn-del" aria-label="מחק תזכורת" onclick="deleteReminder('${r.id}')">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
       </button>
-    </div>`).join('');
+      <span class="reminder-days">${daysLabel}</span>
+    </div>`;
+  }).join('');
 }
 
 function deleteReminder(id) {
   clearTimeout(reminderTimers[id]);
   delete reminderTimers[id];
-  saveReminders(loadReminders().filter(r => r.id !== id));
+  const list = loadReminders().filter(r => r.id !== id);
+  saveReminders(list);
+  syncRemindersToSW(list);
   renderReminderList();
 }
 
@@ -1886,7 +1940,11 @@ function renderNotifStatus() {
     return;
   }
   const p = Notification.permission;
-  const labels = { granted: 'התראות מאושרות', denied: 'התראות חסומות — אפשר ידנית בהגדרות הדפדפן', default: 'לחץ + להוספת תזכורת כדי לאשר התראות' };
+  const labels = {
+    granted: 'התראות מאושרות',
+    denied:  'התראות חסומות — אפשר ידנית בהגדרות הדפדפן',
+    default: 'לחץ + להוספת תזכורת כדי לאשר התראות'
+  };
   el.innerHTML = `<span class="notif-dot ${p}"></span>${labels[p]}`;
 }
 
@@ -1899,6 +1957,25 @@ async function requestNotifPermission() {
   return result === 'granted';
 }
 
+// Send reminders to the Service Worker (stores in Cache API, survives SW restarts)
+function syncRemindersToSW(reminders) {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.ready.then(reg => {
+    if (reg.active) reg.active.postMessage({ type: 'SET_REMINDERS', reminders });
+  });
+}
+
+// Register Periodic Background Sync so SW can fire notifications when app is closed
+async function registerPeriodicSync(reg) {
+  if (!('periodicSync' in reg)) return;
+  try {
+    const status = await navigator.permissions.query({ name: 'periodic-background-sync' });
+    if (status.state === 'granted') {
+      await reg.periodicSync.register('check-reminders', { minInterval: 60 * 1000 });
+    }
+  } catch { /* API not available */ }
+}
+
 document.getElementById('btn-add-reminder').addEventListener('click', async () => {
   const timeInput  = document.getElementById('reminder-time');
   const labelInput = document.getElementById('reminder-label-input');
@@ -1909,13 +1986,14 @@ document.getElementById('btn-add-reminder').addEventListener('click', async () =
   const granted = await requestNotifPermission();
   if (!granted) { renderNotifStatus(); return; }
 
-  const r = { id: Date.now().toString(), time, label };
+  const days = getSelectedDays();
+  const r    = { id: Date.now().toString(), time, label, days };
   const list = loadReminders();
   list.push(r);
-  // Keep sorted by time
   list.sort((a, b) => a.time.localeCompare(b.time));
   saveReminders(list);
   scheduleReminder(r);
+  syncRemindersToSW(list);
   renderReminderList();
   labelInput.value = '';
 });
@@ -1924,6 +2002,14 @@ document.getElementById('btn-add-reminder').addEventListener('click', async () =
 renderNotifStatus();
 renderReminderList();
 scheduleAllReminders();
+
+// Sync reminders to SW and register Periodic Background Sync
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(reg => {
+    syncRemindersToSW(loadReminders());
+    registerPeriodicSync(reg);
+  });
+}
 
 /* ========================================================
    EXPORT / IMPORT
