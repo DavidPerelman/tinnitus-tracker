@@ -1,9 +1,9 @@
-const CACHE_NAME = 'tinnitus-tracker-v4';
+const CACHE_NAME = 'tinnitus-tracker-v5';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/icon.svg'
+  '/tinnitus-tracker/',
+  '/tinnitus-tracker/index.html',
+  '/tinnitus-tracker/manifest.json',
+  '/tinnitus-tracker/icon.svg'
 ];
 
 self.addEventListener('install', e => {
