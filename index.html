@@ -351,11 +351,34 @@
   /* ===== ALL-ENTRIES LIST (log screen) ===== */
   .all-entries-wrap { width: 100%; }
   .all-entries-header { font-size: 13px; color: var(--text2); margin-bottom: 8px; padding: 0 2px; }
-  .entry-day-group { margin-bottom: 14px; }
-  .entry-day-label {
-    font-size: 12px; color: var(--text2); font-weight: 600;
-    margin-bottom: 6px; padding: 0 2px; letter-spacing: 0.3px;
+  .entry-day-group { margin-bottom: 8px; }
+  .entry-day-header {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px 12px;
+    cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent;
   }
+  .entry-day-group.open .entry-day-header {
+    border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+  }
+  .entry-day-chevron {
+    font-size: 10px; color: var(--text2); flex-shrink: 0;
+    display: inline-block; transition: transform 0.2s; line-height: 1;
+  }
+  .entry-day-group.open .entry-day-chevron { transform: rotate(90deg); }
+  .entry-day-date {
+    font-size: 13px; font-weight: 600; flex: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .entry-day-meta { font-size: 12px; color: var(--text2); flex-shrink: 0; white-space: nowrap; }
+  .entry-day-body {
+    display: none;
+    border: 1px solid var(--border); border-top: none;
+    border-bottom-left-radius: 10px; border-bottom-right-radius: 10px;
+    padding: 6px 8px 8px;
+    background: var(--surface);
+  }
+  .entry-day-group.open .entry-day-body { display: block; }
   .entry-row {
     display: flex; align-items: center; gap: 8px;
     background: var(--surface); border: 1px solid var(--border);
@@ -1133,17 +1156,27 @@ function tunerStopSound() {
 btnPlay.addEventListener('click', () => tunerPlaying ? tunerStopSound() : tunerStartSound());
 updateVolLabel();
 
+// Tracks which day keys the user has manually expanded (persists across re-renders)
+const openDays = new Set();
+
 function renderAllEntries() {
-  const entries = loadEntries();
+  const entries  = loadEntries();
   const container = document.getElementById('all-entries');
   if (!entries.length) {
     container.innerHTML = '<p class="today-empty">אין רישומים עדיין</p>';
     return;
   }
-  const groups = dailyGroups(entries);
+  const groups  = dailyGroups(entries);
+  const avgs    = dailyAvgs(entries);
   const dayKeys = Object.keys(groups).sort().reverse();
+  const today   = todayKey();
+
   container.innerHTML = dayKeys.map(dk => {
     const dayEntries = groups[dk].slice().sort((a, b) => b.ts.localeCompare(a.ts));
+    const count  = dayEntries.length;
+    const dayAvg = round1(avgs[dk]);
+    const isOpen = dk === today || openDays.has(dk);
+
     const rows = dayEntries.map(e => `
       <div class="entry-row" data-ts="${e.ts}">
         <span class="entry-time">${formatTime(e.ts)}</span>
@@ -1158,11 +1191,23 @@ function renderAllEntries() {
           </button>
         </div>
       </div>`).join('');
-    return `<div class="entry-day-group">
-      <div class="entry-day-label">${formatDate(dk)}</div>
-      ${rows}
+
+    return `<div class="entry-day-group${isOpen ? ' open' : ''}" data-dk="${dk}">
+      <div class="entry-day-header" onclick="toggleDayGroup(this)">
+        <span class="entry-day-chevron">▶</span>
+        <span class="entry-day-date">${formatDate(dk)}</span>
+        <span class="entry-day-meta">${count} · ${dayAvg}</span>
+      </div>
+      <div class="entry-day-body">${rows}</div>
     </div>`;
   }).join('');
+}
+
+function toggleDayGroup(headerEl) {
+  const group  = headerEl.closest('.entry-day-group');
+  const isOpen = group.classList.toggle('open');
+  if (isOpen) openDays.add(group.dataset.dk);
+  else        openDays.delete(group.dataset.dk);
 }
 
 function startEdit(btn, ts, currentVal) {
